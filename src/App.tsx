@@ -1,10 +1,15 @@
-function App() {
+import { ProductForm } from "./components/ProductForm";
+import { Navbar } from "./components/Navbar";
+import { ProductList } from "./components/ProductList";
 
+function App() {
   return (
-    <>
-      <h1>Vite + React</h1>
-    </>
-  )
+    <div className="text-red">
+      <Navbar />
+      <ProductForm />
+      <ProductList/>
+    </div>
+  );
 }
 
-export default App
+export default App;
