@@ -16,6 +16,19 @@ export class HttpApiAdapter implements HttpAdapter {
       throw error;
     }
   }
+
+  async post<T>(url: string, data: any): Promise<T> {
+    try {
+      const { data: responseData } = await this.axiosInstance.post<T>(
+        url,
+        data
+      );
+      return responseData;
+    } catch (error) {
+      console.error("Error en POST:", error);
+      throw error;
+    }
+  }
 }
 
 export const axiosApiAdapter = new HttpApiAdapter();

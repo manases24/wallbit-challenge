@@ -1,49 +1,79 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import { Product, ProductsState } from "../../../api/interfaces";
+import { Product } from "../../../api/interfaces";
 import { axiosApiAdapter } from "../../../api/httpAdapter";
 import { store } from "../../store";
 
 const url = "https://fakestoreapi.com/products";
 
-export const fetchProducts = createAsyncThunk<Product[], void>(
-  "products/fetchProducts",
-  async (_, thunkAPI) => {
-    try {
-      const response = await axiosApiAdapter.get<Product[]>(url);
-      return response;
-    } catch (error) {
-      return thunkAPI.rejectWithValue("Failed to fetch products");
-    }
+// Agregar un producto al carrito
+export const addProductApi = createAsyncThunk(
+  "cart/addProduct",
+  async ({ productId, quantity }: { productId: string; quantity: number }) => {
+    const response = await axiosApiAdapter.get<Product>(`${url}/${productId}`);
+    return { ...response, quantity };
   }
 );
 
-const initialState: ProductsState = {
-  items: [],
-  isLoading: false,
-  error: null,
+const initialState = {
+  items: [] as Array<{
+    id: number;
+    title: string;
+    price: number;
+    quantity: number;
+  }>, // Tipo para los productos
+  error: null as string | null,
 };
 
-const productsSlice = createSlice({
-  name: "products",
+const cartSlice = createSlice({
+  name: "cart",
   initialState,
-  reducers: {},
+  reducers: {
+    // Reducer para agregar productos directamente
+    addProduct: (state, action) => {
+      const existingProduct = state.items.find(
+        (item) => item.id === action.payload.id
+      );
+      if (existingProduct) {
+        existingProduct.quantity += action.payload.quantity;
+      } else {
+        state.items.push(action.payload);
+      }
+    },
+    // Reducer para eliminar productos
+    removeProduct: (state, action) => {
+      state.items = state.items.filter((item) => item.id !== action.payload.id);
+    },
+    // Reducer para limpiar el carrito
+    clearCart: (state) => {
+      state.items = [];
+    },
+  },
   extraReducers: (builder) => {
     builder
-      .addCase(fetchProducts.pending, (state) => {
-        state.isLoading = true;
-        state.error = null;
+      .addCase(addProductApi.fulfilled, (state, action) => {
+        // Validar que el payload sea válido antes de modificar el estado
+        if (action.payload && action.payload.id) {
+          const existingProduct = state.items.find(
+            (item) => item.id === action.payload.id
+          );
+          if (existingProduct) {
+            existingProduct.quantity += action.payload.quantity;
+          } else {
+            state.items.push(action.payload);
+          }
+        }
       })
-      .addCase(fetchProducts.fulfilled, (state, action) => {
-        state.isLoading = false;
-        state.items = action.payload;
-      })
-      .addCase(fetchProducts.rejected, (state, action) => {
-        state.isLoading = false;
-        state.error = action.payload as string;
+      .addCase(addProductApi.rejected, (state, action) => {
+        // Registrar el error en el estado
+        state.error = action.error.message || "Error al agregar el producto";
       });
   },
 });
 
+export const { addProduct, removeProduct, clearCart } = cartSlice.actions;
+
+// Tipo del estado de la tienda
 export type RootState = ReturnType<typeof store.getState>;
 export type AppDispatch = typeof store.dispatch;
-export default productsSlice.reducer;
+// Exportar el reducer
+export default cartSlice.reducer;
